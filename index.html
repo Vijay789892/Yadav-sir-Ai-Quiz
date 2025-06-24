@@ -275,23 +275,12 @@
                     </div>
                 </div>
             </div>
-
             
             <div id="quiz-container" style="display: none;"></div>
             <div id="result-container" style="display: none;"></div>
 
-<script type="text/javascript">
-	atOptions = {
-		'key' : 'dfb9f45a0bfc2772a4f0f47ce1391707',
-		'format' : 'iframe',
-		'height' : 50,
-		'width' : 320,
-		'params' : {}
-	};
-</script>
-<script type="text/javascript" src="//www.highperformanceformat.com/dfb9f45a0bfc2772a4f0f47ce1391707/invoke.js"></script>
 
-        </div>
+           </div>
     </main>
 
     <!-- History Modal -->
@@ -308,17 +297,19 @@
 
 
 
-<script type="text/javascript">
+
+<button id="button1" onclick="myFunction()"> 
+  <script type="text/javascript">
 	atOptions = {
-		'key' : '68baa3fdb766c51c4e785d08e5b8a541',
+		'key' : 'dfb9f45a0bfc2772a4f0f47ce1391707',
 		'format' : 'iframe',
-		'height' : 60,
-		'width' : 468,
+		'height' : 50,
+		'width' : 320,
 		'params' : {}
 	};
 </script>
-<script type="text/javascript" src="//www.highperformanceformat.com/68baa3fdb766c51c4e785d08e5b8a541/invoke.js"></script>
-
+<script type="text/javascript" src="//www.highperformanceformat.com/dfb9f45a0bfc2772a4f0f47ce1391707/invoke.js"></script>
+</button>
 
 
 
@@ -348,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const historySearchBar = document.getElementById('history-search-bar');
     
     // API Key
-    const API_KEY = "AIzaSyDHy9J04dI8LdK1ijNJMrRXubJ5ucx9rdk";
+    const API_KEY = "AIzaSyDHy9J04dI8LdK1ijNJMrRXubJ5ucx9rdk"; // अपनी Gemini API कुंजी यहाँ डालें
 
     // Quiz State
     let currentQuestionIndex = 0;
@@ -436,11 +427,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const model = "gemini-1.5-flash";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
         
-        // --- MODIFIED PROMPT ---
         const prompt = `"${topic}" विषय पर हिंदी में 20 बहुविकल्पीय प्रश्नों का एक **नया और अनोखा** क्विज़ बनाएं। कठिनाई का स्तर "${difficulty}" हो। आउटपुट केवल JSON प्रारूप में दें, जिसमें "quiz" नामक एक कुंजी हो जो प्रश्न ऑब्जेक्ट्स की एक ऐरे हो। प्रत्येक ऑब्जेक्ट में "question", "options" (4 स्ट्रिंग्स की ऐरे), "answer", और "hint" कुंजी होनी चाहिए। JSON के अलावा कोई अतिरिक्त टेक्स्ट न जोड़ें।`;
 
         try {
-            // --- MODIFIED FETCH REQUEST BODY ---
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -456,7 +445,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             if (!data.candidates || !data.candidates[0].content) {
-                // Try to get more info from the response if available
                 if (data.error) throw new Error(`API Error: ${data.error.message}`);
                 throw new Error('API से अमान्य प्रतिक्रिया मिली।');
             }
@@ -603,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="margin: 1rem 0; font-size: 1.2em; font-weight: 600; color: ${perfColor};">${perfMessage}</div>
             <h3>📝 गलत उत्तरों की समीक्षा:</h3>
             <ul style="list-style: none; padding: 0;">
-                ${incorrectAnswers.length > 0 ? incorrectAnswers.map(item => `<li style="margin-bottom: 10px; padding: 10px; background-color: var(--progress-bg); border-radius: 6px;"><strong>प्रश्न:</strong> ${item.question}<br><strong>आपका उत्तर:</strong> <span style="color: var(--incorrect-color);">${item.userAnswer}</span><br><strong>सही उत्तर:</strong> <span style="color: var(--correct-color);">${item.answer}</span></li>`).join('') : '<li>वाह! आपने कोई गलती नहीं की।</li>'}
+                ${incorrectAnswers.length > 0 ? incorrectAnswers.map(item => `<li style="margin-bottom: 10px; padding: 10px; background-color: var(--progress-bg); border-radius: 6px; text-align: left;"><strong>प्रश्न:</strong> ${item.question}<br><strong>आपका उत्तर:</strong> <span style="color: var(--incorrect-color);">${item.userAnswer}</span><br><strong>सही उत्तर:</strong> <span style="color: var(--correct-color);">${item.answer}</span></li>`).join('') : '<li>वाह! आपने कोई गलती नहीं की।</li>'}
             </ul>
             <div class="result-buttons">
                 <button id="restart-btn-res" class="btn">🔄 नया क्विज़</button>
@@ -656,42 +644,95 @@ document.addEventListener('DOMContentLoaded', () => {
         historySearchBar.value = "";
     }
 
+    // --- नया और बेहतर मल्टी-पेज PDF फंक्शन ---
+    function generateMultiPagePDF(elementToCapture, filename) {
+        const { jsPDF } = window.jspdf;
+        const clone = elementToCapture.cloneNode(true);
+
+        // PDF के लिए क्लोन को स्टाइल करें
+        clone.style.width = '180mm';
+        clone.style.padding = '10mm';
+        clone.style.color = '#000000';
+        clone.style.backgroundColor = '#ffffff';
+        clone.style.boxSizing = 'border-box';
+        clone.querySelectorAll('*').forEach(el => {
+            el.style.color = '#000000';
+            if (el.style.backgroundColor) {
+                el.style.backgroundColor = 'transparent';
+            }
+        });
+
+        document.body.appendChild(clone);
+
+        html2canvas(clone, { scale: 2, useCORS: true, logging: false })
+            .then(canvas => {
+                document.body.removeChild(clone);
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = canvasWidth / canvasHeight;
+                const imgHeightInPDF = pdfWidth / ratio;
+
+                let heightLeft = imgHeightInPDF;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPDF);
+                heightLeft -= pdfHeight;
+
+                while (heightLeft >= 0) {
+                    position = -heightLeft;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPDF);
+                    heightLeft -= pdfHeight;
+                }
+                
+                pdf.save(`${filename.replace(/ /g, '_')}.pdf`);
+            })
+            .catch(err => {
+                console.error("PDF बनाने में त्रुटि:", err);
+                alert("PDF बनाने में कोई समस्या हुई। कृपया पुनः प्रयास करें।");
+                if (document.body.contains(clone)) {
+                    document.body.removeChild(clone);
+                }
+            });
+    }
+    
+    // यह फंक्शन अब नए हेल्पर फंक्शन को कॉल करेगा
+    function downloadResultsAsPDF(elementToCapture) {
+        const pdfFilename = `Quiz_Results_${currentTopic}`;
+        generateMultiPagePDF(elementToCapture, pdfFilename);
+    }
+    
+    // हिस्ट्री वाला फंक्शन भी अब नए हेल्पर फंक्शन को कॉल करेगा
     function downloadHistoryAsPDF(quizId) {
         const quizData = (JSON.parse(localStorage.getItem('quizHistory')) || []).find(q => q.id == quizId);
         if (!quizData) return alert('हिस्ट्री से क्विज़ नहीं मिला।');
 
-        const incorrectAnswers = quizData.questions.filter(q => !q.isCorrect && q.userAnswer);
+        const unanswered = quizData.questions.filter(q => !q.userAnswer);
+        const incorrect = quizData.questions.filter(q => !q.isCorrect && q.userAnswer);
+        const correct = quizData.questions.filter(q => q.isCorrect);
+
         const tempContainer = document.createElement('div');
         tempContainer.innerHTML = `
-            <h2>क्विज़ परिणाम: ${quizData.topic}</h2>
-            <p><strong>कठिनाई:</strong> ${quizData.difficulty} | <strong>दिनांक:</strong> ${quizData.date}</p>
-            <p style="font-size: 1.2em; font-weight: 600;">अंतिम स्कोर: ${quizData.finalScore}/${quizData.totalScore}</p>
-            <hr>
-            <h3>गलत उत्तरों की समीक्षा:</h3>
-            <ul style="list-style: none; padding: 0;">
-                ${incorrectAnswers.length > 0 ? incorrectAnswers.map(item => `<li style="margin-bottom: 15px;"><strong>प्रश्न:</strong> ${item.question}<br><strong>आपका उत्तर:</strong> ${item.userAnswer}<br><strong>सही उत्तर:</strong> ${item.answer}</li>`).join('') : '<li>कोई गलती नहीं हुई।</li>'}
-            </ul>`;
+            <div style="font-family: 'Poppins', sans-serif; font-size: 12px; line-height: 1.6;">
+                <h2 style="font-size: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-bottom: 10px;">क्विज़ परिणाम: ${quizData.topic}</h2>
+                <p><strong>कठिनाई:</strong> ${quizData.difficulty} | <strong>दिनांक:</strong> ${quizData.date}</p>
+                <p style="font-size: 16px; font-weight: 600;">अंतिम स्कोर: ${quizData.finalScore} / ${quizData.totalScore}</p>
+                <hr style="margin: 15px 0;">
+                <h3 style="font-size: 16px; margin-top: 20px;">गलत उत्तर (${incorrect.length}):</h3>
+                ${incorrect.length > 0 ? incorrect.map(item => `<div style="margin-bottom: 12px; padding: 8px; border-left: 3px solid #e74c3c;"><strong>प्रश्न:</strong> ${item.question}<br><strong>आपका उत्तर:</strong> ${item.userAnswer}<br><strong>सही उत्तर:</strong> ${item.answer}</div>`).join('') : '<p>कोई उत्तर गलत नहीं था।</p>'}
+                <h3 style="font-size: 16px; margin-top: 20px;">सही उत्तर (${correct.length}):</h3>
+                ${correct.length > 0 ? correct.map(item => `<div style="margin-bottom: 12px; padding: 8px; border-left: 3px solid #2ecc71;"><strong>प्रश्न:</strong> ${item.question}<br><strong>सही उत्तर:</strong> ${item.answer}</div>`).join('') : ''}
+                <h3 style="font-size: 16px; margin-top: 20px;">बिना उत्तर दिए गए प्रश्न (${unanswered.length}):</h3>
+                ${unanswered.length > 0 ? unanswered.map(item => `<div style="margin-bottom: 12px; padding: 8px; border-left: 3px solid #f39c12;"><strong>प्रश्न:</strong> ${item.question}<br><strong>सही उत्तर:</strong> ${item.answer}</div>`).join('') : '<p>सभी प्रश्नों के उत्तर दिए गए।</p>'}
+            </div>`;
         
-        downloadResultsAsPDF(tempContainer, `${quizData.topic}_${quizData.date}`);
-    }
-
-    function downloadResultsAsPDF(elementToCapture, filename = currentTopic) {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        
-        elementToCapture.style.width = '180mm'; 
-        elementToCapture.style.padding = '10px';
-        elementToCapture.style.color = '#000';
-        document.body.appendChild(elementToCapture);
-
-        html2canvas(elementToCapture, { scale: 2, useCORS: true }).then(canvas => {
-            document.body.removeChild(elementToCapture);
-            const imgData = canvas.toDataURL('image/png');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth - 20, pdfHeight);
-            pdf.save(`Quiz_Results_${filename.replace(/ /g, '_')}.pdf`);
-        });
+        const pdfFilename = `${quizData.topic}_${quizData.date}`;
+        generateMultiPagePDF(tempContainer, pdfFilename);
     }
 
     async function shareApp() {
