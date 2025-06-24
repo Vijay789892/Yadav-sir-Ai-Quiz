@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI आधारित डायनामिक क्विज़ जेनरेटर</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- PDF बनाने के लिए लाइब्रेरी -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --light-bg-gradient: linear-gradient(135deg, #6b48ff, #00ddeb);
+            --light-container-bg: rgba(255, 255, 255, 0.95);
+            --light-text-heading: #2c3e50;
+            --light-text-body: #34495e;
+            --light-btn-bg: #6b48ff;
+            --light-btn-hover-bg: #5c3de6;
+            --light-progress-fill: #6b48ff;
+            --light-progress-bg: #e0e0e0;
+
+            --dark-bg-gradient: linear-gradient(135deg, #2c3e50, #4b79a1);
+            --dark-container-bg: rgba(30, 30, 30, 0.95);
+            --dark-text-heading: #e0e0e0;
+            --dark-text-body: #bdc3c7;
+            --dark-btn-bg: #00ddeb;
+            --dark-btn-hover-bg: #00b7c3;
+            --dark-progress-fill: #00ddeb;
+            --dark-progress-bg: #34495e;
+
+            --correct-color: #2ecc71;
+            --incorrect-color: #e74c3c;
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            
+            --bg-gradient: var(--light-bg-gradient);
+            --container-bg: var(--light-container-bg);
+            --text-heading: var(--light-text-heading);
+            --text-body: var(--light-text-body);
+            --btn-bg: var(--light-btn-bg);
+            --btn-hover-bg: var(--light-btn-hover-bg);
+            --progress-fill: var(--light-progress-fill);
+            --progress-bg: var(--light-progress-bg);
+        }
+
+        html[data-theme="dark"] {
+            --bg-gradient: var(--dark-bg-gradient);
+            --container-bg: var(--dark-container-bg);
+            --text-heading: var(--dark-text-heading);
+            --text-body: var(--dark-text-body);
+            --btn-bg: var(--dark-btn-bg);
+            --btn-hover-bg: var(--dark-btn-hover-bg);
+            --progress-fill: var(--dark-progress-fill);
+            --progress-bg: var(--dark-progress-bg);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-gradient); color: var(--text-body); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
+        main { padding: 2rem 1rem; flex-grow: 1; }
+        .container { max-width: 800px; margin: 2rem auto; background: var(--container-bg); padding: 2rem; border-radius: 16px; box-shadow: var(--shadow); transition: background 0.3s; }
+        
+        .page-header { background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); padding: 1rem 1.5rem; width: 100%; z-index: 100; position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .header-left h1 { font-size: 1.5em; color: white; margin: 0; }
+        .menu-btn { background: none; border: none; color: white; font-size: 2em; cursor: pointer; z-index: 1001; }
+        
+        #sidebar-menu { height: 100%; width: 280px; position: fixed; z-index: 1002; top: 0; left: -280px; background-color: var(--container-bg); overflow-x: hidden; transition: 0.3s; padding-top: 60px; box-shadow: 3px 0 15px rgba(0,0,0,0.2); }
+        #sidebar-menu a { padding: 12px 16px; text-decoration: none; font-size: 1.1em; color: var(--text-heading); display: block; transition: 0.2s; border-left: 4px solid transparent; }
+        #sidebar-menu a:hover { background-color: var(--progress-bg); border-left-color: var(--btn-bg); }
+        #sidebar-menu .close-btn { position: absolute; top: 15px; right: 25px; font-size: 36px; margin-left: 50px; color: var(--text-heading); }
+        #overlay { position: fixed; display: none; width: 100%; height: 100%; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 1001; cursor: pointer; }
+        
+        .search-container { display: flex; align-items: center; width: 90%; }
+        .search-container input { padding: 0.5rem 1rem; border-radius: 10px 0 0 20px; border: 1px solid #fff; background: rgba(255,255,255,0.2); color: #fff; font-size: 1em; width: 90%; }
+        .search-container input::placeholder { color: rgba(255,255,255,0.8); }
+        .search-container button { padding: 0.5rem 1rem; border-radius: 0 10px 20px 0; border: 1px solid #fff; border-left: none; background: #fff; color: var(--light-btn-bg); cursor: pointer; font-weight: 600; }
+        
+        .header-search { max-width: 450px; }
+        .main-search { margin: 1.5rem auto !important; }
+        .main-search input { border-color: var(--text-body); background: transparent; color: var(--text-heading); }
+        .main-search input::placeholder { color: var(--text-body); opacity: 0.7; }
+        .main-search button { border-color: var(--btn-bg); background: var(--btn-bg); color: #fff; }
+
+        #start-screen { text-align: center; }
+        #start-screen h2 { font-size: 2em; color: var(--text-heading); margin-bottom: 1rem; }
+       
+        .popular-topics h3, .test-selector h3 { 
+            font-size: 1.5em; color: var(--text-heading); margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid var(--btn-bg); padding-bottom: 0.5rem; display: inline-block; 
+        }
+        .popular-topics h4, .test-selector h4 { 
+            color: var(--text-heading); margin-top: 1.5rem; margin-bottom: 0.75rem; text-align: left; padding-left: 10px; border-left: 3px solid var(--btn-bg); 
+        }
+        .topic-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+        .topic-tag { background: var(--btn-bg); color: white; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.9em; transition: all 0.2s; }
+        .topic-tag:hover { background: var(--btn-hover-bg); transform: scale(1.05); }
+
+        #toggle-exam-list-btn {
+            width: 100%;
+            margin-top: 1.5rem;
+            background-color: var(--btn-hover-bg);
+            font-size: 1.1em;
+        }
+        #exam-list-container {
+            border-top: 2px solid var(--progress-bg);
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .quiz-info, .progress-bar-container, .timer, .question-text, .options-grid, .quiz-controls { margin-bottom: 1rem; }
+        .quiz-info { display: flex; justify-content: space-between; font-weight: 600; color: var(--text-heading); }
+        .progress-bar-container { width: 100%; background-color: var(--progress-bg); border-radius: 10px; height: 10px; }
+        .progress-bar { height: 100%; width: 0%; background-color: var(--progress-fill); border-radius: 10px; transition: width 0.3s ease-in-out; }
+        .timer { font-size: 1.5em; font-weight: 700; text-align: center; color: var(--text-heading); }
+        .question-text { font-size: 1.3em; font-weight: 600; text-align: center; min-height: 50px; line-height: 1.4; }
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .option { background-color: var(--progress-bg); border: 2px solid transparent; border-radius: 8px; padding: 1rem; cursor: pointer; transition: all 0.2s; user-select: none; text-align: center; font-weight: 500; }
+        .option:hover:not(.disabled) { transform: translateY(-3px); border-color: var(--btn-bg); box-shadow: 0 4px 12px rgba(107, 72, 255, 0.3); }
+        .option.correct { background-color: var(--correct-color); color: #fff; border-color: var(--correct-color); }
+        .option.incorrect { background-color: var(--incorrect-color); color: #fff; border-color: var(--incorrect-color); }
+        .option.disabled { pointer-events: none; opacity: 0.7; }
+        .quiz-controls { display: flex; justify-content: space-between; align-items: center; }
+        .quiz-controls > div { display: flex; gap: 0.5rem; }
+        .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; background-color: var(--btn-bg); color: #fff; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn:hover { background-color: var(--btn-hover-bg); transform: translateY(-2px); }
+        .btn:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+        #result-container { display: none; text-align: center; }
+        .result-buttons { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; }
+
+        .modal { display: none; position: fixed; z-index: 1003; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: var(--container-bg); margin: 10% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 12px; color: var(--text-body); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--progress-bg); padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-header h2 { color: var(--text-heading); }
+        .close-modal { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        
+        #history-search-bar { width: 100%; padding: 8px; margin-bottom: 15px; border-radius: 6px; border: 1px solid var(--progress-bg); background-color: transparent; color: var(--text-body); }
+        #history-list { max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        #history-list li { background-color: var(--progress-bg); padding: 10px 15px; border-radius: 6px; margin-bottom: 8px; list-style-type: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .history-item-info { display: flex; flex-direction: column; }
+        .history-item-info span:first-child { font-weight: bold; }
+        .download-history-pdf-btn { padding: 5px 10px; font-size: 0.8em; }
+
+        @media (max-width: 768px) { 
+            .header-search { display: none; }
+            .header-left h1 { font-size: 1.2em; }
+            .options-grid { grid-template-columns: 1fr; } 
+        }
+        @media (min-width: 769px) {
+            .main-search { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar-menu">
+        <a href="javascript:void(0)" class="close-btn" id="close-menu-btn">×</a>
+        <a href="#" id="history-btn">📜 क्विज़ हिस्ट्री</a>
+        <a href="#" id="share-app-btn">🔗 ऐप शेयर करें</a>
+        <div class="theme-switcher" style="padding: 15px;">
+            <label>थीम बदलें:</label>
+            <input type="checkbox" id="theme-toggle">
+        </div>
+    </div>
+    <div id="overlay"></div>
+
+    <header class="page-header">
+        <div class="header-left">
+            <button class="menu-btn" id="open-menu-btn">☰</button>
+            <h1>Quiz</h1>
+            <div class="search-container main-search">
+                <input type="search" id="main-search-bar" placeholder="कोई भी विषय खोजें...">
+                <button id="main-search-btn">क्विज़ बनाएं</button>
+            </div>
+        </div>
+        <div class="search-container header-search">
+             <input type="search" id="header-search-bar" placeholder="कोई भी विषय खोजें...">
+             <button id="header-search-btn">बनाएं</button>
+        </div>
+    </header>
+
+    <marquee behavior="scroll" direction="left"> किसी भी Exam की quiz टेस्ट दे सकते है,बस आप कोनसा Exam quiz खेलना चाहते है लिखे,, जैसे की, Cg police upsc, cgpsc, कुछ भी लिखे आपको quiz टेस्ट बना कर दे देगा,   </marquee>
+
+    <main>
+        <div id="quiz-wrapper" class="container">
+            
+            <div id="start-screen">
+               <div class="difficulty-selector" style="margin-bottom: 2rem;">
+                    <label for="difficulty">कठिनाई स्तर चुनें: </label>
+                    <select id="difficulty" style="padding: 5px; border-radius: 5px;">
+                        <option value="आसान">आसान</option>
+                        <option value="मध्यम" selected>मध्यम</option>
+                        <option value="कठिन">कठिन</option>
+                    </select>
+                </div>
+
+                <button id="toggle-exam-list-btn" class="btn">📝 प्रतियोगी परीक्षा टेस्ट चुनें</button>
+
+                <div id="exam-list-container" style="display: none;">
+                    <div class="test-selector">
+                        <h4>पुलिस भर्ती</h4>
+                        <div class="topic-tags">
+                            <span class="topic-tag" data-topic="cg police">CG Police</span>
+                            <span class="topic-tag" data-topic="up police">UP Police</span>
+                            <span class="topic-tag" data-topic="mp police">MP Police</span>
+                            <span class="topic-tag" data-topic="bihar police">Bihar Police</span>
+                            <span class="topic-tag" data-topic="delhi police">Delhi Police</span>
+                        </div>
+                        
+                        <h4>सिविल सेवा</h4>
+                        <div class="topic-tags">
+                            <span class="topic-tag" data-topic="upsc">UPSC</span>
+                            <span class="topic-tag" data-topic="cgpsc">CGPSC</span>
+                            <span class="topic-tag" data-topic="uppsc">UPPSC</span>
+                            <span class="topic-tag" data-topic="mppsc">MPPSC</span>
+                            <span class="topic-tag" data-topic="bpsc">BPSC</span>
+                        </div>
+                        
+                        <h4>रेलवे भर्ती</h4>
+                        <div class="topic-tags">
+                            <span class="topic-tag" data-topic="rrb ntpc">RRB NTPC</span>
+                            <span class="topic-tag" data-topic="rrb group d">RRB Group D</span>
+                            <span class="topic-tag" data-topic="rrb je">RRB JE</span>
+                            <span class="topic-tag" data-topic="rrb alp">RRB ALP</span>
+                        </div>
+                        
+                        <h4>SSC परीक्षाएं</h4>
+                        <div class="topic-tags">
+                            <span class="topic-tag" data-topic="ssc gd">SSC GD</span>
+                            <span class="topic-tag" data-topic="ssc cgl">SSC CGL</span>
+                            <span class="topic-tag" data-topic="ssc chsl">SSC CHSL</span>
+                            <span class="topic-tag" data-topic="ssc mts">SSC MTS</span>
+                        </div>
+                        
+                        <h4>अन्य महत्वपूर्ण</h4>
+                        <div class="topic-tags">
+                            <span class="topic-tag" data-topic="बैंकिंग">बैंकिंग</span>
+                            <span class="topic-tag" data-topic="ctet">CTET</span>
+                            <span class="topic-tag" data-topic="nda">NDA</span>
+                            <span class="topic-tag" data-topic="isro">ISRO</span>
+                        </div>
+                    </div>
+                </div>
+
+                  <div class="popular-topics">
+                    <h3>🔥 लोकप्रिय विषय:</h3>
+                    <h4>मुख्य विषय</h4>
+                    <div class="topic-tags">
+                        <span class="topic-tag" data-topic="गणित">गणित</span>
+                        <span class="topic-tag" data-topic="रीजनिंग">रीजनिंग</span>
+                        <span class="topic-tag" data-topic="विज्ञान">विज्ञान</span>
+                        <span class="topic-tag" data-topic="भूगोल">भूगोल</span>
+                        <span class="topic-tag" data-topic="कंप्यूटर साइंस">कंप्यूटर साइंस</span>
+                        <span class="topic-tag" data-topic="अर्थशास्त्र">अर्थशास्त्र</span>
+                    </div>
+                    <h4>इतिहास और राजनीति</h4>
+                    <div class="topic-tags">
+                        <span class="topic-tag" data-topic="भारत का इतिहास">भारत का इतिहास</span>
+                        <span class="topic-tag" data-topic="भारतीय संविधान">भारतीय संविधान</span>
+                        <span class="topic-tag" data-topic="स्वतंत्रता संग्राम">स्वतंत्रता संग्राम</span>
+                        <span class="topic-tag" data-topic="मुगल साम्राज्य">मुगल साम्राज्य</span>
+                        <span class="topic-tag" data-topic="राजनीति विज्ञान">राजनीति विज्ञान</span>
+                        <span class="topic-tag" data-topic="महात्मा गांधी">महात्मा गांधी</span>
+                    </div>
+                    <h4>सामान्य ज्ञान और संस्कृति</h4>
+                    <div class="topic-tags">
+                        <span class="topic-tag" data-topic="सामान्य ज्ञान">सामान्य ज्ञान</span>
+                        <span class="topic-tag" data-topic="करंट अफेयर्स">करंट अफेयर्स</span>
+                        <span class="topic-tag" data-topic="खेल">खेल</span>
+                        <span class="topic-tag" data-topic="हिंदी साहित्य">हिंदी साहित्य</span>
+                        <span class="topic-tag" data-topic="भारतीय कला">भारतीय कला</span>
+                        <span class="topic-tag" data-topic="बॉलीवुड">बॉलीवुड</span>
+                        <span class="topic-tag" data-topic="पर्यावरण">पर्यावरण</span>
+                        <span class="topic-tag" data-topic="आयुर्वेद">आयुर्वेद</span>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="quiz-container" style="display: none;"></div>
+            <div id="result-container" style="display: none;"></div>
+
+<script type="text/javascript">
+	atOptions = {
+		'key' : 'dfb9f45a0bfc2772a4f0f47ce1391707',
+		'format' : 'iframe',
+		'height' : 50,
+		'width' : 320,
+		'params' : {}
+	};
+</script>
+<script type="text/javascript" src="//www.highperformanceformat.com/dfb9f45a0bfc2772a4f0f47ce1391707/invoke.js"></script>
+
+        </div>
+    </main>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📜 क्विज़ हिस्ट्री</h2>
+                <span class="close-modal" id="close-history-modal">×</span>
+            </div>
+            <input type="search" id="history-search-bar" placeholder="विषय से खोजें...">
+            <ul id="history-list"></ul>
+        </div>
+    </div>
+
+
+
+<script type="text/javascript">
+	atOptions = {
+		'key' : '68baa3fdb766c51c4e785d08e5b8a541',
+		'format' : 'iframe',
+		'height' : 60,
+		'width' : 468,
+		'params' : {}
+	};
+</script>
+<script type="text/javascript" src="//www.highperformanceformat.com/68baa3fdb766c51c4e785d08e5b8a541/invoke.js"></script>
+
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const headerSearchBar = document.getElementById('header-search-bar');
+    const headerSearchBtn = document.getElementById('header-search-btn');
+    const mainSearchBar = document.getElementById('main-search-bar');
+    const mainSearchBtn = document.getElementById('main-search-btn');
+    const startScreen = document.getElementById('start-screen');
+    const quizContainer = document.getElementById('quiz-container');
+    const resultContainer = document.getElementById('result-container');
+    const difficultySelect = document.getElementById('difficulty');
+    const themeToggle = document.getElementById('theme-toggle');
+    const toggleExamListBtn = document.getElementById('toggle-exam-list-btn');
+    const examListContainer = document.getElementById('exam-list-container');
+    const openMenuBtn = document.getElementById('open-menu-btn');
+    const closeMenuBtn = document.getElementById('close-menu-btn');
+    const sidebarMenu = document.getElementById('sidebar-menu');
+    const overlay = document.getElementById('overlay');
+    const historyBtn = document.getElementById('history-btn');
+    const shareAppBtn = document.getElementById('share-app-btn');
+    const historyModal = document.getElementById('history-modal');
+    const closeHistoryModal = document.getElementById('close-history-modal');
+    const historyList = document.getElementById('history-list');
+    const historySearchBar = document.getElementById('history-search-bar');
+    
+    // API Key
+    const API_KEY = "AIzaSyDHy9J04dI8LdK1ijNJMrRXubJ5ucx9rdk";
+
+    // Quiz State
+    let currentQuestionIndex = 0;
+    let currentQuizQuestions = [];
+    let currentTopic = "";
+    let currentDifficulty = "";
+    let timer;
+    let timeLeft = 20;
+
+    // Event Listeners
+    function triggerSearch(inputElement) {
+        const topic = inputElement.value.trim();
+        if (topic) {
+            handleSearch(topic);
+        } else {
+            alert('कृपया क्विज़ बनाने के लिए एक विषय दर्ज करें।');
+        }
+    }
+
+    headerSearchBtn.addEventListener('click', () => triggerSearch(headerSearchBar));
+    headerSearchBar.addEventListener('keydown', (e) => { if (e.key === 'Enter') triggerSearch(headerSearchBar); });
+    mainSearchBtn.addEventListener('click', () => triggerSearch(mainSearchBar));
+    mainSearchBar.addEventListener('keydown', (e) => { if (e.key === 'Enter') triggerSearch(mainSearchBar); });
+    
+    startScreen.addEventListener('click', (e) => {
+        if (e.target.classList.contains('topic-tag')) {
+            const topic = e.target.dataset.topic;
+            headerSearchBar.value = topic;
+            mainSearchBar.value = topic;
+            handleSearch(topic);
+        }
+    });
+
+    toggleExamListBtn.addEventListener('click', () => {
+        const isHidden = examListContainer.style.display === 'none' || examListContainer.style.display === '';
+        examListContainer.style.display = isHidden ? 'block' : 'none';
+        toggleExamListBtn.textContent = isHidden ? 'प्रतियोगी परीक्षा सूची छिपाएं' : '📝 प्रतियोगी परीक्षा टेस्ट चुनें';
+    });
+
+    const toggleMenu = (show) => {
+        sidebarMenu.style.left = show ? '0' : '-280px';
+        overlay.style.display = show ? 'block' : 'none';
+    };
+    openMenuBtn.addEventListener('click', () => toggleMenu(true));
+    closeMenuBtn.addEventListener('click', () => toggleMenu(false));
+    overlay.addEventListener('click', () => toggleMenu(false));
+    shareAppBtn.addEventListener('click', shareApp);
+    historyBtn.addEventListener('click', () => { displayHistory(); toggleMenu(false); });
+    closeHistoryModal.addEventListener('click', () => historyModal.style.display = 'none');
+    window.addEventListener('click', (event) => { if (event.target == historyModal) historyModal.style.display = "none"; });
+
+    historySearchBar.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        historyList.querySelectorAll('li').forEach(item => {
+            const topic = item.querySelector('.history-item-info span:first-child').textContent.toLowerCase();
+            item.style.display = topic.includes(searchTerm) ? 'flex' : 'none';
+        });
+    });
+
+    historyList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('download-history-pdf-btn')) {
+            const quizId = e.target.closest('li').dataset.quizId;
+            downloadHistoryAsPDF(quizId);
+        }
+    });
+
+    // --- Core Functions ---
+    function handleSearch(topic) {
+        if (!API_KEY || !API_KEY.startsWith("AIzaS")) {
+            alert("API कुंजी सही नहीं है। कृपया कोड जांचें।");
+            return;
+        }
+        currentTopic = topic;
+        currentDifficulty = difficultySelect.value;
+        generateQuizFromTopic(currentTopic, currentDifficulty);
+    }
+
+    async function generateQuizFromTopic(topic, difficulty) {
+        startScreen.style.display = 'none';
+        resultContainer.innerHTML = '';
+        resultContainer.style.display = 'none';
+        quizContainer.innerHTML = `<div style="text-align: center; font-size: 1.2em;">🧠 क्विज़ तैयार हो रहा है...</div>`;
+        quizContainer.style.display = 'block';
+
+        const model = "gemini-1.5-flash";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
+        
+        // --- MODIFIED PROMPT ---
+        const prompt = `"${topic}" विषय पर हिंदी में 20 बहुविकल्पीय प्रश्नों का एक **नया और अनोखा** क्विज़ बनाएं। कठिनाई का स्तर "${difficulty}" हो। आउटपुट केवल JSON प्रारूप में दें, जिसमें "quiz" नामक एक कुंजी हो जो प्रश्न ऑब्जेक्ट्स की एक ऐरे हो। प्रत्येक ऑब्जेक्ट में "question", "options" (4 स्ट्रिंग्स की ऐरे), "answer", और "hint" कुंजी होनी चाहिए। JSON के अलावा कोई अतिरिक्त टेक्स्ट न जोड़ें।`;
+
+        try {
+            // --- MODIFIED FETCH REQUEST BODY ---
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.9
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            
+            const data = await response.json();
+            if (!data.candidates || !data.candidates[0].content) {
+                // Try to get more info from the response if available
+                if (data.error) throw new Error(`API Error: ${data.error.message}`);
+                throw new Error('API से अमान्य प्रतिक्रिया मिली।');
+            }
+            
+            let text = data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const quizData = JSON.parse(text);
+
+            if (!quizData.quiz || quizData.quiz.length === 0) throw new Error('AI से मान्य क्विज़ डेटा नहीं मिला।');
+            
+            currentQuizQuestions = quizData.quiz;
+            startQuiz();
+
+        } catch (error) {
+            console.error('क्विज़ बनाने में विफल:', error);
+            alert(`क्विज़ बनाने में विफल: ${error.message}\nकृपया पुनः प्रयास करें या API कुंजी जांचें।`);
+            startScreen.style.display = 'block';
+            quizContainer.style.display = 'none';
+        }
+    }
+
+    function startQuiz() {
+        currentQuestionIndex = 0;
+        currentQuizQuestions.forEach(q => {
+            q.userAnswer = null;
+            q.isCorrect = false;
+        }); 
+        showQuestion();
+    }
+
+    function showQuestion() {
+        clearInterval(timer); 
+
+        if (currentQuestionIndex >= currentQuizQuestions.length) {
+            showResults();
+            return;
+        }
+
+        const questionData = currentQuizQuestions[currentQuestionIndex];
+        const score = calculateScore();
+
+        quizContainer.innerHTML = `
+            <div class="quiz-info">
+                <span>विषय: ${currentTopic}</span>
+                <span>प्रश्न: ${currentQuestionIndex + 1}/${currentQuizQuestions.length}</span>
+                <span>स्कोर: ${score}</span>
+            </div>
+            <div class="progress-bar-container"><div class="progress-bar" style="width: ${((currentQuestionIndex + 1) / currentQuizQuestions.length) * 100}%"></div></div>
+            <div class="timer" id="timer-display"></div>
+            <div id="quiz-content">
+                <p class="question-text">${questionData.question}</p>
+                <div class="options-grid">
+                    ${questionData.options.map(opt => `<div class="option" data-answer="${opt}">${opt}</div>`).join('')}
+                </div>
+                <div class="quiz-controls">
+                    <div>
+                        <button id="back-btn-q" class="btn">⬅️ पिछला</button>
+                        <button id="hint-btn-q" class="btn">💡 संकेत</button>
+                    </div>
+                    <button id="next-btn-q" class="btn">आगे बढ़ें ➡️</button>
+                </div>
+            </div>`;
+        
+        const nextBtn = document.getElementById('next-btn-q');
+        const backBtn = document.getElementById('back-btn-q');
+        const hintBtn = document.getElementById('hint-btn-q');
+        
+        nextBtn.addEventListener('click', () => { currentQuestionIndex++; showQuestion(); });
+        backBtn.addEventListener('click', () => { if (currentQuestionIndex > 0) { currentQuestionIndex--; showQuestion(); } });
+        hintBtn.addEventListener('click', () => showHint(questionData));
+        
+        backBtn.style.display = currentQuestionIndex > 0 ? 'inline-block' : 'none';
+        nextBtn.style.display = 'none';
+
+        if (questionData.userAnswer) {
+            restoreAnsweredState(questionData);
+        } else {
+            document.querySelectorAll('.option').forEach(opt => opt.addEventListener('click', (e) => selectOption(e.target, questionData)));
+            startTimer(questionData);
+        }
+    }
+    
+    function selectOption(selectedOption, questionData) {
+        clearInterval(timer);
+        questionData.userAnswer = selectedOption.dataset.answer;
+        questionData.isCorrect = questionData.userAnswer === questionData.answer;
+        restoreAnsweredState(questionData);
+    }
+
+    function restoreAnsweredState(questionData) {
+        document.getElementById('timer-display').innerHTML = '✔️ उत्तर दिया गया';
+        document.querySelectorAll('.option').forEach(option => {
+            option.classList.add('disabled');
+            if (option.dataset.answer === questionData.answer) option.classList.add('correct');
+            if (option.dataset.answer === questionData.userAnswer && !questionData.isCorrect) option.classList.add('incorrect');
+        });
+        document.getElementById('hint-btn-q').style.display = 'none';
+        document.getElementById('next-btn-q').style.display = 'block';
+        document.querySelector('.quiz-info span:last-child').textContent = `स्कोर: ${calculateScore()}`;
+    }
+
+    function calculateScore() {
+        return currentQuizQuestions.reduce((total, q) => q.isCorrect ? total + 10 : total, 0);
+    }
+
+    function startTimer(questionData) {
+        timeLeft = 20;
+        const timerDisplay = document.getElementById('timer-display');
+        timerDisplay.textContent = `⏰ ${timeLeft}`;
+        timerDisplay.style.color = 'var(--text-heading)';
+        timer = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = `⏰ ${timeLeft}`;
+            if (timeLeft <= 5) timerDisplay.style.color = 'var(--incorrect-color)';
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                timeUp(questionData);
+            }
+        }, 1000);
+    }
+
+    function timeUp(questionData) {
+        questionData.userAnswer = 'समय समाप्त';
+        questionData.isCorrect = false;
+        restoreAnsweredState(questionData);
+    }
+
+    function showHint(questionData) {
+        alert(`संकेत: ${questionData.hint || 'कोई संकेत उपलब्ध नहीं है।'}`);
+        document.getElementById('hint-btn-q').disabled = true;
+    }
+
+    function showResults() {
+        quizContainer.style.display = 'none';
+        const finalScore = calculateScore();
+        const totalScore = currentQuizQuestions.length * 10;
+        const incorrectAnswers = currentQuizQuestions.filter(q => !q.isCorrect && q.userAnswer);
+        const percentage = totalScore > 0 ? (finalScore / totalScore) * 100 : 0;
+        let perfMessage = (percentage >= 80) ? "बहुत बढ़िया! आपने शानदार प्रदर्शन किया।" : (percentage >= 50) ? "अच्छा प्रयास! आप और बेहतर कर सकते हैं।" : "और अभ्यास की आवश्यकता है। पुनः प्रयास करें!";
+        let perfColor = (percentage >= 80) ? 'var(--correct-color)' : (percentage >= 50) ? '#f39c12' : 'var(--incorrect-color)';
+
+        resultContainer.innerHTML = `
+            <h2>🎉 क्विज़ पूरा हुआ!</h2>
+            <div>आपका अंतिम स्कोर: <strong>${finalScore}/${totalScore}</strong></div>
+            <div style="margin: 1rem 0; font-size: 1.2em; font-weight: 600; color: ${perfColor};">${perfMessage}</div>
+            <h3>📝 गलत उत्तरों की समीक्षा:</h3>
+            <ul style="list-style: none; padding: 0;">
+                ${incorrectAnswers.length > 0 ? incorrectAnswers.map(item => `<li style="margin-bottom: 10px; padding: 10px; background-color: var(--progress-bg); border-radius: 6px;"><strong>प्रश्न:</strong> ${item.question}<br><strong>आपका उत्तर:</strong> <span style="color: var(--incorrect-color);">${item.userAnswer}</span><br><strong>सही उत्तर:</strong> <span style="color: var(--correct-color);">${item.answer}</span></li>`).join('') : '<li>वाह! आपने कोई गलती नहीं की।</li>'}
+            </ul>
+            <div class="result-buttons">
+                <button id="restart-btn-res" class="btn">🔄 नया क्विज़</button>
+                <button id="share-result-btn-res" class="btn">🔗 रिजल्ट शेयर करें</button>
+                <button id="download-pdf-btn-res" class="btn">📄 PDF डाउनलोड</button>
+            </div>`;
+        
+        resultContainer.style.display = 'block';
+
+        document.getElementById('restart-btn-res').addEventListener('click', () => {
+            resultContainer.style.display = 'none';
+            startScreen.style.display = 'block';
+            headerSearchBar.value = '';
+            mainSearchBar.value = '';
+        });
+        document.getElementById('share-result-btn-res').addEventListener('click', () => shareResults(finalScore, totalScore));
+        document.getElementById('download-pdf-btn-res').addEventListener('click', () => downloadResultsAsPDF(resultContainer));
+        
+        saveQuizToHistory();
+    }
+    
+    function saveQuizToHistory() {
+        let history = JSON.parse(localStorage.getItem('quizHistory')) || [];
+        history.unshift({
+            id: Date.now(),
+            topic: currentTopic,
+            difficulty: currentDifficulty,
+            finalScore: calculateScore(),
+            totalScore: currentQuizQuestions.length * 10,
+            date: new Date().toLocaleDateString('hi-IN'),
+            questions: currentQuizQuestions
+        });
+        if (history.length > 30) history.pop();
+        localStorage.setItem('quizHistory', JSON.stringify(history));
+    }
+
+    function displayHistory() {
+        let history = JSON.parse(localStorage.getItem('quizHistory')) || [];
+        historyList.innerHTML = history.length === 0 ? '<li>कोई क्विज़ हिस्ट्री नहीं है।</li>' :
+            history.map(item => `
+                <li data-quiz-id="${item.id}">
+                    <div class="history-item-info">
+                        <span>${item.topic} (${item.difficulty})</span>
+                        <span style="font-size: 0.9em;">स्कोर: ${item.finalScore}/${item.totalScore} - ${item.date}</span>
+                    </div>
+                    <button class="btn download-history-pdf-btn">📄 PDF</button>
+                </li>
+            `).join('');
+        historyModal.style.display = 'block';
+        historySearchBar.value = "";
+    }
+
+    function downloadHistoryAsPDF(quizId) {
+        const quizData = (JSON.parse(localStorage.getItem('quizHistory')) || []).find(q => q.id == quizId);
+        if (!quizData) return alert('हिस्ट्री से क्विज़ नहीं मिला।');
+
+        const incorrectAnswers = quizData.questions.filter(q => !q.isCorrect && q.userAnswer);
+        const tempContainer = document.createElement('div');
+        tempContainer.innerHTML = `
+            <h2>क्विज़ परिणाम: ${quizData.topic}</h2>
+            <p><strong>कठिनाई:</strong> ${quizData.difficulty} | <strong>दिनांक:</strong> ${quizData.date}</p>
+            <p style="font-size: 1.2em; font-weight: 600;">अंतिम स्कोर: ${quizData.finalScore}/${quizData.totalScore}</p>
+            <hr>
+            <h3>गलत उत्तरों की समीक्षा:</h3>
+            <ul style="list-style: none; padding: 0;">
+                ${incorrectAnswers.length > 0 ? incorrectAnswers.map(item => `<li style="margin-bottom: 15px;"><strong>प्रश्न:</strong> ${item.question}<br><strong>आपका उत्तर:</strong> ${item.userAnswer}<br><strong>सही उत्तर:</strong> ${item.answer}</li>`).join('') : '<li>कोई गलती नहीं हुई।</li>'}
+            </ul>`;
+        
+        downloadResultsAsPDF(tempContainer, `${quizData.topic}_${quizData.date}`);
+    }
+
+    function downloadResultsAsPDF(elementToCapture, filename = currentTopic) {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        
+        elementToCapture.style.width = '180mm'; 
+        elementToCapture.style.padding = '10px';
+        elementToCapture.style.color = '#000';
+        document.body.appendChild(elementToCapture);
+
+        html2canvas(elementToCapture, { scale: 2, useCORS: true }).then(canvas => {
+            document.body.removeChild(elementToCapture);
+            const imgData = canvas.toDataURL('image/png');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth - 20, pdfHeight);
+            pdf.save(`Quiz_Results_${filename.replace(/ /g, '_')}.pdf`);
+        });
+    }
+
+    async function shareApp() {
+        if (!navigator.share) return alert('शेयरिंग समर्थित नहीं है।');
+        try {
+            await navigator.share({ title: 'AI क्विज़ जेनरेटर', text: 'इस अद्भुत AI क्विज़ जेनरेटर को देखें!', url: window.location.href });
+        } catch (err) { console.error('शेयर करने में त्रुटि:', err); }
+    }
+    async function shareResults(score, totalScore) {
+        if (!navigator.share) return alert('शेयरिंग समर्थित नहीं है।');
+        try {
+            await navigator.share({ title: `${currentTopic} क्विज़ का परिणाम`, text: `मैंने '${currentTopic}' क्विज़ में ${score}/${totalScore} स्कोर किया!`, url: window.location.href });
+        } catch (err) { console.error('परिणाम शेयर करने में त्रुटि:', err); }
+    }
+    const themeSwitchHandler = () => {
+        const theme = themeToggle.checked ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    };
+    themeToggle.addEventListener('change', themeSwitchHandler);
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    themeToggle.checked = savedTheme === 'dark';
+});
+</script>
+</body>
+</html>
